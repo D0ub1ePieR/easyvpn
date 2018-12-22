@@ -1,7 +1,9 @@
 from scapy.all import *
 
-client_ip_table=["10.1.64.120"]
-target_ip="192.168.108.1"
+client_ip_table=["192.168.160.128"]
+target_ip="192.168.108.137"
+server_ip_out="192.168.160.129"
+server_ip_in="192.168.108.128"
 
 def transmit_icmp(pktx):
     '''
@@ -10,7 +12,7 @@ def transmit_icmp(pktx):
     try:
         proto=pktx[IP].proto
     except:
-		print("[log] not icmp packet") # TODO:
+		print("[log] not icmp packet") # TODO
     else:
         src_ip=pktx[IP].src
 		dst_ip=pktx[IP].dst
@@ -19,8 +21,12 @@ def transmit_icmp(pktx):
 			pkt_id=pktx[ICMP].id
 			pkt_seq=pktx[ICMP].seq
 			print("[log] catch an icmp paclet : ip.src",src_ip," ip.dst",dst_ip," icmp.seq",pkt_seq," icmp.id",pkt_id)
-			if src_ip in client_ip_table:
-                send(IP(dst=target_ip)/ICMP(seq=pkt_seq,id=pkt_id)/pktx[ICMP].payload)
+			if src_ip in client_ip_table and dst_ip==server_ip_out:
+                if pktx[ICMP].type==8:
+                    send(IP(dst=target_ip)/ICMP(seq=pkt_seq,id=pkt_id)/pktx[ICMP].payload)
+            elif src_ip==target_ip and dst_ip!=client_ip_table[0]:
+                if pktx[ICMP].type==0:
+                    send(IP(src=target_ip,dst=client_ip_table[0])/ICMP(seq=pkt_seq-50,type=0,id=pkt_id-50)/pktx[ICMP].payload);
 
 def sniff_packet():
 	'''
