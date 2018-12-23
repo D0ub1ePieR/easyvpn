@@ -13,7 +13,7 @@ def transmit_icmp(pktx):
     try:
         proto=pktx[IP].proto
     except:
-		print("[log] not icmp packet") # TODO
+		print("[log] not ip packet") # TODO
     else:
         src_ip=pktx[IP].src
         dst_ip=pktx[IP].dst

@@ -17,12 +17,12 @@ def two_length_str(pstr):
 
 def fix_icmp(pktx):
 	'''
-		sniff回调处理函数
+		处理icmp
 	'''
 	try:
 		proto=pktx[IP].proto
 	except:
-		print("[log] not icmp packet") #TODO
+		print("[log] not ip packet") #TODO
 	else:
 		src_ip=pktx[IP].src
 		dst_ip=pktx[IP].dst
@@ -38,12 +38,45 @@ def fix_icmp(pktx):
 				send_payload=pkt_icmp_data+Raw(dst_ip).load+Raw(two_length_str(dst_ip)).load
 				send(IP(dst=server_ip_out)/ICMP(seq=pkt_seq+50,id=pkt_id+50)/Raw(send_payload))
 
+def fix_tcp(pktx):
+	'''
+		处理tcp包
+	'''
+	src_ip=pktx[IP].src
+	dst_ip=pktx[IP].dst
+	try:
+		pkt_id=pktx[TCP].id
+		pkt_seq=pktx[TCP].seq
+		pkt_flags=pktx[TCP].flags
+		pkt_sport=pktx[TCP].sport
+		pkt_dport=pktx[TCP].dport
+	except:
+		print("[log] tcp pakcet fix failed")
+	else:
+		#TCP flags FIN-1 SYN-2 RST-4 ACK-16
+
+
 def sniff_packet():
 	'''
 		抓取本机发送的数据包
 	'''
 	# sniff(filter,iface,prn,count)
-	sniff(iface="ens38",prn=fix_icmp)
+	def classify(pktx):
+		'''
+			sniff回调处理函数,分类包
+		'''
+		try:
+			proto=pktx[IP].proto
+		except:
+			print("[log] not ip packet")
+		else:
+			#proto为6 表示tcp
+			if proto==6:
+				fix_tcp(pktx)
+			#proto为1 表示icmp
+			if proto==1:
+				fix_icmp(pktx)
+	sniff(iface="ens38",prn=classify)
 
 
 def main():
