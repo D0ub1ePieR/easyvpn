@@ -47,9 +47,11 @@ def transmit_tcp(pktx):
     '''
         实现客户端与目标主机的tcp连接
     '''
+    # 获取双方ip
     src_ip=pktx[IP].src
     dst_ip=pktx[IP].dst
     try:
+        # 获取TCP请求信息
         pkt_ack=pktx[TCP].ack
         pkt_seq=pktx[TCP].seq
         pkt_flags=pktx[TCP].flags
@@ -59,9 +61,11 @@ def transmit_tcp(pktx):
         print("[log] tcp pakcet fix failed")
     else:
         #TCP flags FIN-1 SYN-2 RST-4 ACK-16
+        # 处理客户端发送报文
         if src_ip in client_ip_table and dst_ip==server_ip_out:
             # SYN
             if pkt_flags==2:
+                # 从数据段得到客户端请求的目的地址
                 data=pktx.payload.load
                 pkt_sport=pkt_sport-50
                 #port_length=int(data[-1])
@@ -78,14 +82,18 @@ def transmit_tcp(pktx):
                 pkt_sport=pkt_sport-50
                 print("[get ack]")
                 for i in range(0,len(request_stack)):
+                    # 查找是否存在TCP连接
                     if request_stack[i][:4]==[src_ip,Raw(data).load,pkt_sport,pkt_dport]:
                         if pkt_ack==request_stack[i][5]+1 and pkt_seq==request_stack[i][6]:
                             print("[send ack]")
+                            # 转发ACK
                             send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+        # 处理目标主机发送报文
         if dst_ip in client_ip_table and src_ip!=server_ip_out:
             # SYN ACK
             if pkt_flags==18:
                 for i in range(0,len(request_stack)):
+                    # 查找是否存在TCP连接
                     if request_stack[i][:4]==[dst_ip,Raw(src_ip).load,pkt_dport,pkt_sport]:
                         if pkt_ack==request_stack[i][5]+1:
                             send(IP(src=src_ip,dst=dst_ip)/TCP(flags=18,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))

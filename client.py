@@ -54,6 +54,7 @@ def fix_tcp(pktx):
         print("[log] tcp pakcet fix failed")
     else:
         #TCP flags FIN-1 SYN-2 RST-4 ACK-16
+		# 使用浏览器 端口+50 向服务器发送
         if dst_ip in ip_table:
             if pkt_flags==2:
                 send(IP(dst=server_ip_out)/TCP(flags=2,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
@@ -82,6 +83,7 @@ def sniff_packet():
             print("[log] not ip packet")
         else:
             #proto为6 表示tcp
+			# 包括HTTP
             if proto==6:
                 fix_tcp(pktx)
             #proto为1 表示icmp
