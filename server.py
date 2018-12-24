@@ -72,7 +72,7 @@ def transmit_tcp(pktx):
                 if [src_ip,data,pkt_sport,pkt_dport] not in [t[:4] for t in request_stack]:
                     # 记录每一个tcp连接
                     global server_port
-                    request_stack.append([src_ip,data,pkt_sport,pkt_dport,server_port,pkt_seq,pkt_ack])
+                    request_stack.append([src_ip,data,pkt_sport,pkt_dport,server_port,pkt_seq,pkt_ack,pktx[TCP].len])
                     server_port=server_port+1
                     # 转发syn请求
                     send(IP(src=src_ip,dst=data)/TCP(flags=2,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
@@ -88,9 +88,13 @@ def transmit_tcp(pktx):
                             print("[send ack]")
                             # 转发ACK
                             send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+                            request_stack[i][5]=pkt_seq
+                            request_stack[i][6]=pkt_ack
                         else:
                             # 建立连接后的确认号由上一个包和当前包大小确认
                             send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+                        # 记录当前报文长度
+                        request_stack[i][-1]=pktx[TCP].len
             # PSH ACK
             if pkt_flags==24:
                 pkt_sport=pkt_sport-50
@@ -112,6 +116,15 @@ def transmit_tcp(pktx):
                             send(IP(src=src_ip,dst=dst_ip)/TCP(flags=18,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
                             request_stack[i][5]=pkt_seq
                             request_stack[i][6]=pkt_ack
+            # ACK
+            if pkt_flags==16:
+                for i in range(0,len(request_stack)):
+                    # 查找是否存在TCP连接
+                    if request_stack[i][:4]==[dst_ip,Raw(src_ip).load,pkt_dport,pkt_sport]:
+                        # TODO 校验
+                        send(IP(src=src_ip,dst=dst_ip)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+                        request_stack[i][5]=pkt_seq
+                        request_stack[i][6]=pkt_ack
 
 def sniff_packet():
     '''
