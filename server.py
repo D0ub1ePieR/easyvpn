@@ -133,6 +133,7 @@ def sniff_packet():
             #proto为1 表示icmp
             if proto==1:
                 transmit_icmp(pktx)
+            # TODO 接受登录报文
     # sniff(filter,iface,prn,count)
     sniff(prn=classify)
 

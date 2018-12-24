@@ -1,9 +1,13 @@
 from scapy.all import *
+import sys,hashlib
 
 pkt_data=[]
 ip_table=["192.168.108.137","192.168.108.1"]
 server_ip_out="192.168.160.129"
 #server_ip_in="192.168.108.128"
+user_name="double_pier"
+user_passwd="123456"
+key="B1ueBa11"
 
 def two_length_str(pstr):
     '''
@@ -96,10 +100,36 @@ def sniff_packet():
                 fix_icmp(pktx)
     sniff(iface="ens38",prn=classify)
 
+def login(name,passwd):
+    '''
+        登陆模块
+    '''
+    encode=hashlib.sha256()
+    encode.update(passwd.encode("utf-8"))
+    mid=encode.hexdigest()
+    encode.update((mid+key).encode('utf-8'))
+    final=encode.hexdigest()
+    # TODO 选择合适协议发送
+
 def main():
     '''
         主函数
     '''
+    global user_name
+    global user_passwd
+    try:
+        if sys.argv[1]!="-d":
+            user_name=sys.argv[1]
+    except:
+        user_name=input("user_name:")
+        user_passwd=input("user_passwd:")
+    else:
+        try:
+            user_passwd=sys.argv[2]
+        except:
+            user_passwd=input("user_passwd:")
+    finally:
+        login(user_name,user_passwd)
     sniff_packet()
 
 main()
