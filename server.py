@@ -88,6 +88,19 @@ def transmit_tcp(pktx):
                             print("[send ack]")
                             # 转发ACK
                             send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+                        else:
+                            # 建立连接后的确认号由上一个包和当前包大小确认
+                            send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
+            # PSH ACK
+            if pkt_flags==24:
+                pkt_sport=pkt_sport-50
+                data=pktx[TCP].payload.load
+                ip_length=int(data[-2:])
+                request_ip=data[-2-ip_length:-2]
+                send_load=data[:-2-ip_length]
+                print("[send psh ack]")
+                # 转发psh ack
+                send(IP(src=src_ip,dst_ip=request_ip)/TCP(flags=24,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(send_load))
         # 处理目标主机发送报文
         if dst_ip in client_ip_table and src_ip!=server_ip_out:
             # SYN ACK
@@ -114,6 +127,7 @@ def sniff_packet():
             print("[log] not ip packet")
         else:
             #proto为6 表示tcp
+            # HTTP
             if proto==6:
                 transmit_tcp(pktx)
             #proto为1 表示icmp

@@ -53,7 +53,7 @@ def fix_tcp(pktx):
     except:
         print("[log] tcp pakcet fix failed")
     else:
-        #TCP flags FIN-1 SYN-2 RST-4 ACK-16
+        #TCP flags FIN-1 SYN-2 RST-4 PSH-8 ACK-16
 		# 使用浏览器 端口+50 向服务器发送
         if dst_ip in ip_table:
             if pkt_flags==2:
@@ -67,6 +67,11 @@ def fix_tcp(pktx):
             # 理论上不会进这个分支
             if pkt_flags==18:
                 send(IP(dst=server_ip_out)/TCP(flags=18,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq))
+            # PSH ACK
+            if pkt_flags==24:
+                pkt_load=pktx[TCP].payload.load
+                send_load=pkt_load+Raw(dst_ip).load+Raw(two_length_str(dst_ip)).load
+                send(IP(dst=server_ip_out)/TCP(flags=24,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq)/Raw(send_load))
 
 def sniff_packet():
     '''
@@ -90,7 +95,6 @@ def sniff_packet():
             if proto==1:
                 fix_icmp(pktx)
     sniff(iface="ens38",prn=classify)
-
 
 def main():
     '''
