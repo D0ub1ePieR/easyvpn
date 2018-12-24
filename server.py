@@ -63,23 +63,31 @@ def transmit_tcp(pktx):
             # SYN
             if pkt_flags==2:
                 data=pktx.payload.load
+                pkt_sport=pkt_sport-50
+                #port_length=int(data[-1])
                 if [src_ip,data,pkt_sport,pkt_dport] not in [t[:4] for t in request_stack]:
                     # 记录每一个tcp连接
+                    global server_port
                     request_stack.append([src_ip,data,pkt_sport,pkt_dport,server_port,pkt_seq,pkt_ack])
                     server_port=server_port+1
                     # 转发syn请求
                     send(IP(src=src_ip,dst=data)/TCP(flags=2,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
             # ACK
             if pkt_flags==16:
-                for i in len(request_stack):
-                    if request_stack[i][4]==[src_ip,dst_ip,pkt_sport,pkt_dport]:
+                data=pktx.payload.load
+                pkt_sport=pkt_sport-50
+                print("[get ack]")
+                for i in range(0,len(request_stack)):
+                    if request_stack[i][:4]==[src_ip,Raw(data).load,pkt_sport,pkt_dport]:
                         if pkt_ack==request_stack[i][5]+1 and pkt_seq==request_stack[i][6]:
+                            print("[send ack]")
                             send(IP(src=src_ip,dst=pktx.payload.load)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
         if dst_ip in client_ip_table and src_ip!=server_ip_out:
+            # SYN ACK
             if pkt_flags==18:
-                for i in len(request_stack):
-                    if request_stack[i][:4]==[dst_ip,src_ip,pkt_dport,pkt_sport]:
-                        if pkt_ack=request_stack[i][5]+1:
+                for i in range(0,len(request_stack)):
+                    if request_stack[i][:4]==[dst_ip,Raw(src_ip).load,pkt_dport,pkt_sport]:
+                        if pkt_ack==request_stack[i][5]+1:
                             send(IP(src=src_ip,dst=dst_ip)/TCP(flags=18,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack))
                             request_stack[i][5]=pkt_seq
                             request_stack[i][6]=pkt_ack
@@ -104,7 +112,7 @@ def sniff_packet():
             if proto==1:
                 transmit_icmp(pktx)
     # sniff(filter,iface,prn,count)
-    sniff(filter="icmp",prn=classify)
+    sniff(prn=classify)
 
 def main():
     '''

@@ -56,12 +56,13 @@ def fix_tcp(pktx):
         #TCP flags FIN-1 SYN-2 RST-4 ACK-16
         if dst_ip in ip_table:
             if pkt_flags==2:
-                send(IP(dst=server_ip_out)/TCP(flags=2,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
+                send(IP(dst=server_ip_out)/TCP(flags=2,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
             # 提供服务器转发的syn包会使服务器回复一个rst
             if pkt_flags==4:
                 print("[log] recieve a server RST")
             if pkt_flags==16:
-                send(IP(dst=server_ip_out)/TCP(flags=16,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
+				print("[send ack]")
+                send(IP(dst=server_ip_out)/TCP(flags=16,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
             # 理论上不会进这个分支
             if pkt_flags==18:
                 send(IP(dst=server_ip_out)/TCP(flags=18,sport=pkt_sport,dport=pkt_dport,seq=pkt_seq))
