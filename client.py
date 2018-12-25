@@ -57,12 +57,8 @@ def fix_tcp(pktx):
     except:
         print("[log] tcp pakcet fix failed")
     else:
-<<<<<<< HEAD
-        #TCP flags FIN-1 SYN-2 RST-4 ACK-16
-=======
         #TCP flags FIN-1 SYN-2 RST-4 PSH-8 ACK-16
->>>>>>> f4a3401c32f15cf97bf1a49980d1ac56d637b003
-		# 使用浏览器 端口+50 向服务器发送
+        # 使用浏览器 端口+50 向服务器发送
         if dst_ip in ip_table:
             if pkt_flags==2:
                 send(IP(dst=server_ip_out)/TCP(flags=2,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
@@ -70,7 +66,7 @@ def fix_tcp(pktx):
             if pkt_flags==4:
                 print("[log] recieve a server RST")
             if pkt_flags==16:
-				print("[send ack]")
+                print("[send ack]")
                 send(IP(dst=server_ip_out)/TCP(flags=16,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(dst_ip))
             # 理论上不会进这个分支
             if pkt_flags==18:
@@ -79,7 +75,7 @@ def fix_tcp(pktx):
             if pkt_flags==24:
                 pkt_load=pktx[TCP].payload.load
                 send_load=pkt_load+Raw(dst_ip).load+Raw(two_length_str(dst_ip)).load
-                send(IP(dst=server_ip_out)/TCP(flags=24,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq)/Raw(send_load))
+                send(IP(dst=server_ip_out)/TCP(flags=24,sport=pkt_sport+50,dport=pkt_dport,seq=pkt_seq,ack=pkt_ack)/Raw(send_load))
 
 def sniff_packet():
     '''
@@ -96,7 +92,7 @@ def sniff_packet():
             print("[log] not ip packet")
         else:
             #proto为6 表示tcp
-			# 包括HTTP
+            # 包括HTTP
             if proto==6:
                 fix_tcp(pktx)
             #proto为1 表示icmp
@@ -129,7 +125,8 @@ def main():
         user_passwd=input("user_passwd:")
     else:
         try:
-            user_passwd=sys.argv[2]
+            if sys.argv[1]!="-d":
+                user_passwd=sys.argv[2]
         except:
             user_passwd=input("user_passwd:")
     finally:
