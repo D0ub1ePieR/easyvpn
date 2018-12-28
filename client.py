@@ -1,6 +1,7 @@
 from scapy.all import *
-import wx,multiprocessing
-import sys,hashlib
+#import wx
+import multiprocessing
+import sys,hashlib,time
 
 pkt_data=[]
 ip_table=["192.168.108.137","192.168.108.1"]
@@ -102,33 +103,45 @@ def sniff_packet():
                 fix_icmp(pktx)
     sniff(iface="ens38",prn=classify)
 
-def login(evt):
+def login():
     '''
         登陆模块
     '''
+    def udp():
+        sniff(filter="udp",prn=check_login,stop_filter=lambda x:login_flag==1)
+        sniff_packet()
     def check_login(pktx):
-        text_content.write(name.GetValue()," login ",pktx.payload.load," \n")
-        if pktx.payload.load==Raw("success"):
-            global login_flag
-            login_flag=1
+        #text_content.write(name.GetValue()," login ",pktx.payload.load," \n")
+        try:
+            print(pktx.payload.load,pktx[IP].src,pktx[IP].dst)
+            if pktx[IP].src==server_ip_out and pktx[IP].dst=="192.168.160.128":
+                print(user_name," login ",pktx.payload.load,pktx[UDP].payload.load)
+                if pktx.payload.load==Raw("success"):
+                    global login_flag
+                    login_flag=1
+        except:
+            print("wrong")
     global user_name
     global user_passwd
-    user_name=name.GetValue()
-    user_passwd=passwd.GetValue()
-    text_content.write(name.GetValue(),"try to login\n")
+    #user_name=name.GetValue()
+    #user_passwd=passwd.GetValue()
+    print(user_name," try to login")
+    #text_content.write(name.GetValue(),"try to login\n")
 
     encode=hashlib.sha256()
-    encode.update(passwd.encode("utf-8"))
+    encode.update(user_passwd.encode("utf-8"))
     mid=encode.hexdigest()
     encode.update((mid+key).encode('utf-8'))
     final=encode.hexdigest()
-    
-    send(IP(dst=server_ip_out)/UDP()/Raw("usr,",user_name,",pwd,",final))
-    sniff(filter="icmp",count=1)
-    sniff(filter="udp",count=1,prn=check_login)
-    if login_flag==1:
-        p=multiprocessing.Process(target=sniff_packet)
-        p.start()
+    p=multiprocessing.Process(target=udp)
+    p.start()
+    time.sleep(3)
+    send(IP(dst=server_ip_out)/UDP()/Raw(" "*12+"usr,"+user_name+",pwd,"+final))
+    #sniff(filter="icmp",count=1)
+
+    #if login_flag==1:
+        #p=multiprocessing.Process(target=sniff_packet)
+        #p.start()
 
 def save(evt):
     print("save")
@@ -153,6 +166,7 @@ def main():
         except:
             user_passwd=""
     finally:
+        '''
         app=wx.App()
         # 确认标题和窗口大小
         frame=wx.Frame(None,title="EasyVpn",size=(800,800))
@@ -176,5 +190,7 @@ def main():
 
         frame.Show()
         app.MainLoop()
+        '''
+        login()
 
 main()

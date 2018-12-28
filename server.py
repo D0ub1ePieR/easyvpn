@@ -23,28 +23,31 @@ def transmit_icmp(pktx):
         dst_ip=pktx[IP].dst
         #proto为1 表示icmp
         if proto==1:
-            pkt_id=pktx[ICMP].id
-            pkt_seq=pktx[ICMP].seq
-            pkt_icmp_data=pktx[ICMP].payload.load
-            print("[log] catch an icmp paclet : ip.src",src_ip," ip.dst",dst_ip," icmp.seq",pkt_seq," icmp.id",pkt_id)
-            if src_ip in client_ip_table and dst_ip==server_ip_out:
-                #ICMP type为8 表示request请求报文
-                if pktx[ICMP].type==8:
-                    ip_length=int(pkt_icmp_data[-2:])
-                    request_ip=pkt_icmp_data[-2-ip_length:-2]
-                    request_stack.append([src_ip,request_ip])
-                    send(IP(src=server_ip_in,dst=request_ip)/ICMP(seq=pkt_seq,id=pkt_id)/pktx[ICMP].payload)
-            elif src_ip in target_ip_table and dst_ip not in client_ip_table:
-                #ICMP type为0 表示reply回复报文
-                if pktx[ICMP].type==0:
-                    for pair in request_stack:
-                        index=-1
-                        if pair[1]==Raw(src_ip).load:
-                            index=request_stack.index(pair)
-                            send(IP(src=pair[1],dst=pair[0])/ICMP(seq=pkt_seq-50,type=0,id=pkt_id-50)/pktx[ICMP].payload);
-                        if index!=-1:
-                            request_stack.remove(request_stack[index])
-                            break
+            try:
+                pkt_id=pktx[ICMP].id
+                pkt_seq=pktx[ICMP].seq
+                pkt_icmp_data=pktx[ICMP].payload.load
+                print("[log] catch an icmp paclet : ip.src",src_ip," ip.dst",dst_ip," icmp.seq",pkt_seq," icmp.id",pkt_id)
+                if src_ip in client_ip_table and dst_ip==server_ip_out:
+                    #ICMP type为8 表示request请求报文
+                    if pktx[ICMP].type==8:
+                        ip_length=int(pkt_icmp_data[-2:])
+                        request_ip=pkt_icmp_data[-2-ip_length:-2]
+                        request_stack.append([src_ip,request_ip])
+                        send(IP(src=server_ip_in,dst=request_ip)/ICMP(seq=pkt_seq,id=pkt_id)/pktx[ICMP].payload)
+                elif src_ip in target_ip_table and dst_ip not in client_ip_table:
+                    #ICMP type为0 表示reply回复报文
+                    if pktx[ICMP].type==0:
+                        for pair in request_stack:
+                            index=-1
+                            if pair[1]==Raw(src_ip).load:
+                                index=request_stack.index(pair)
+                                send(IP(src=pair[1],dst=pair[0])/ICMP(seq=pkt_seq-50,type=0,id=pkt_id-50)/pktx[ICMP].payload);
+                            if index!=-1:
+                                request_stack.remove(request_stack[index])
+                                break
+            except:
+                print("wrong icmp")
 
 def transmit_tcp(pktx):
     '''
@@ -152,15 +155,21 @@ def check_login(pktx):
     '''
         校验登录
     '''
-    msg=str(pktx.payload.laod)[2:-1]
-    note=msg.split(',')
     try:
-        if usr[note[1]]==note[3]:
-            send(IP(dst=pktx[IP].src)/UDP()/Raw("success"))
-        else:
-            send(IP(dst=pktx[IP].src)/UDP()/Raw("wrong passwd"))
+        print(pktx.payload.load)
+        msg=str(pktx.payload.load)[2:-1]
+        print(msg)
+        note=msg.split(',')
+        print(note)
+        try:
+            if usr[note[1]]==note[3]:
+                send(IP(dst=pktx[IP].src)/UDP()/Raw(" "*12+"success"))
+            else:
+                send(IP(dst=pktx[IP].src)/UDP()/Raw(" "*12+"wrong passwd"))
+        except:
+            send(IP(dst=pktx[IP].src)/UDP()/Raw(" "*12+"no this user"))
     except:
-        send(IP(dst=pktx[IP].src)/UDP()/Raw("no this user"))
+        print("wrong")
 
 def sniff_packet():
     '''
@@ -184,7 +193,8 @@ def sniff_packet():
                 transmit_icmp(pktx)
             #proto为17 表示udp
             if proto==17:
-                check_login(pktx)
+                if pktx[IP].src in client_ip_table:
+                    check_login(pktx)
     # sniff(filter,iface,prn,count)
     sniff(prn=classify)
 
