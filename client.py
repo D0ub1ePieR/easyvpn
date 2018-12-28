@@ -134,7 +134,9 @@ def login():
     encode.update((mid+key).encode('utf-8'))
     final=encode.hexdigest()
     p=multiprocessing.Process(target=udp)
+    #p.daemon=True
     p.start()
+    #p.join()
     time.sleep(3)
     send(IP(dst=server_ip_out)/UDP()/Raw(" "*12+"usr,"+user_name+",pwd,"+final))
     #sniff(filter="icmp",count=1)
@@ -192,5 +194,9 @@ def main():
         app.MainLoop()
         '''
         login()
+    while 1:
+        if login_flag==1:
+            sniff_packet
+        continue
 
 main()
