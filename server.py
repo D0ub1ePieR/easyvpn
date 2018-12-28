@@ -1,5 +1,5 @@
 from scapy.all import *
-import hashlib
+import hashlib,os
 
 client_ip_table=["192.168.160.128"]
 target_ip_table=["192.168.108.137","192.168.108.1"]
@@ -202,6 +202,19 @@ def main():
     '''
         主函数
     '''
+    def init():
+        '''
+            初始化目标ip表
+        '''
+        tmp=os.popen("/usr/sbin/arp -a | awk -F ' ' '{print $1 $2}'").read().split('\n')
+        for ip in tmp:
+            left=ip.find('(')
+            right=ip.find(')')
+            if left!=-1 and right!=-1:
+                if ip[left+1:right][:10]==server_ip_in[:10]:
+                    target_ip_table.append(ip[left+1:right])
+        print(target_ip_table)
+    init()
     sniff_packet()
 
 main()
