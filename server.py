@@ -8,6 +8,7 @@ server_ip_in="192.168.108.128"
 server_port=20000
 last=""
 request_stack=[]
+usr={'double_pier':'dff44de704cd1eea6a118f6ad224b7e4d483604eb343cf84324c8f16f3aebcb6'}
 
 def transmit_icmp(pktx):
     '''
@@ -147,6 +148,20 @@ def transmit_tcp(pktx):
                             request_stack[i][6]=pkt_ack
                             last=t.hexdigest()
 
+def check_login(pktx):
+    '''
+        校验登录
+    '''
+    msg=str(pktx.payload.laod)[2:-1]
+    note=msg.split(',')
+    try:
+        if usr[note[1]]==note[3]:
+            send(IP(dst=pktx[IP].src)/UDP()/Raw("success"))
+        else:
+            send(IP(dst=pktx[IP].src)/UDP()/Raw("wrong passwd"))
+    except:
+        send(IP(dst=pktx[IP].src)/UDP()/Raw("no this user"))
+
 def sniff_packet():
     '''
         抓取本机发送的数据包
@@ -167,7 +182,9 @@ def sniff_packet():
             #proto为1 表示icmp
             if proto==1:
                 transmit_icmp(pktx)
-            # TODO 接受登录报文
+            #proto为17 表示udp
+            if proto==17:
+                check_login(pktx)
     # sniff(filter,iface,prn,count)
     sniff(prn=classify)
 

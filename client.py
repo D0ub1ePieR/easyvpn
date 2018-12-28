@@ -1,4 +1,5 @@
 from scapy.all import *
+import wx,multiprocessing
 import sys,hashlib
 
 pkt_data=[]
@@ -7,6 +8,7 @@ server_ip_out="192.168.160.129"
 #server_ip_in="192.168.108.128"
 user_name="double_pier"
 user_passwd="123456"
+login_flag=0
 key="B1ueBa11"
 
 def two_length_str(pstr):
@@ -100,16 +102,36 @@ def sniff_packet():
                 fix_icmp(pktx)
     sniff(iface="ens38",prn=classify)
 
-def login(name,passwd):
+def login(evt):
     '''
         登陆模块
     '''
+    def check_login(pktx):
+        text_content.write(name.GetValue()," login ",pktx.payload.load," \n")
+        if pktx.payload.load==Raw("success"):
+            global login_flag
+            login_flag=1
+    global user_name
+    global user_passwd
+    user_name=name.GetValue()
+    user_passwd=passwd.GetValue()
+    text_content.write(name.GetValue(),"try to login\n")
+
     encode=hashlib.sha256()
     encode.update(passwd.encode("utf-8"))
     mid=encode.hexdigest()
     encode.update((mid+key).encode('utf-8'))
     final=encode.hexdigest()
-    # TODO 选择合适协议发送
+    
+    send(IP(dst=server_ip_out)/UDP()/Raw("usr,",user_name,",pwd,",final))
+    sniff(filter="icmp",count=1)
+    sniff(filter="udp",count=1,prn=check_login)
+    if login_flag==1:
+        p=multiprocessing.Process(target=sniff_packet)
+        p.start()
+
+def save(evt):
+    print("save")
 
 def main():
     '''
@@ -117,20 +139,42 @@ def main():
     '''
     global user_name
     global user_passwd
+    # 命令行获取初始用户名和密码
     try:
         if sys.argv[1]!="-d":
             user_name=sys.argv[1]
     except:
-        user_name=input("user_name:")
-        user_passwd=input("user_passwd:")
+        user_name=""
+        user_passwd=""
     else:
         try:
-            if sys.argv[1]!="-d":
+            if sys.argv[-1]!="-d":
                 user_passwd=sys.argv[2]
         except:
-            user_passwd=input("user_passwd:")
+            user_passwd=""
     finally:
-        login(user_name,user_passwd)
-    sniff_packet()
+        app=wx.App()
+        # 确认标题和窗口大小
+        frame=wx.Frame(None,title="EasyVpn",size=(800,800))
+        panel=wx.Panel(frame)
+        # 用户名密码输入框
+        text1=wx.StaticText(panel,label="username:",pos=(10,10),size=(100,30))
+        global name
+        name = wx.TextCtrl(panel,-1,user_name,pos=(110,10),size=(200,20))
+        text2=wx.StaticText(panel,label="passwd:",pos=(10,40),size=(100,30))
+        global passwd
+        passwd = wx.TextCtrl(panel,-1,user_passwd,pos=(110,40),size=(200,20),style=wx.TE_PASSWORD)
+        # 登录按钮
+        bt_login=wx.Button(panel,label='Login',pos=(350,20),size=(60,30))
+        bt_login.Bind(wx.EVT_BUTTON,login)
+        # 日志记录文本框
+        global text_content
+        text_content= wx.TextCtrl(panel,pos=(10,100),size=(700,600),style=wx.TE_MULTILINE|wx.HSCROLL)
+        # 导出日志按钮
+        bt_save=wx.Button(panel,label='Save',pos=(10,720),size=(60,30))
+        bt_save.Bind(wx.EVT_BUTTON,save)
+
+        frame.Show()
+        app.MainLoop()
 
 main()
